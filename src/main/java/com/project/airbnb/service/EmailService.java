@@ -102,7 +102,6 @@ public class EmailService {
 
     @SuppressWarnings("null")
     @Async
-    @Async
     public void sendWelcomeEmail(String to, String hoTen) {
         if (!mailEnabled) return;
         try {
@@ -113,7 +112,6 @@ public class EmailService {
         }
     }
     @SuppressWarnings("null")
-    @Async
     @Async
     public void sendVerificationEmail(String to, String verificationToken) {
         if (!mailEnabled) return;
@@ -127,7 +125,6 @@ public class EmailService {
     }
     @SuppressWarnings("null")
     @Async
-    @Async
     public void sendAccountLockedEmail(String to, String hoTen, String reason) {
         if (!mailEnabled) return;
         try {
@@ -138,7 +135,6 @@ public class EmailService {
         }
     }
     @SuppressWarnings("null")
-    @Async
     @Async
     public void sendAccountUnlockedEmail(String to, String hoTen) {
         if (!mailEnabled) return;
@@ -151,7 +147,6 @@ public class EmailService {
     }
     @SuppressWarnings("null")
     @Async
-    @Async
     public void sendRoleChangedEmail(String to, String hoTen, boolean isHost) {
         if (!mailEnabled) return;
         try {
@@ -162,7 +157,6 @@ public class EmailService {
         }
     }
     @SuppressWarnings("null")
-    @Async
     @Async
     public void sendKycVerifiedEmail(String to, String hoTen) {
         if (!mailEnabled) return;
@@ -175,7 +169,6 @@ public class EmailService {
     }
     @SuppressWarnings("null")
     @Async
-    @Async
     public void sendKycRevokedEmail(String to, String hoTen) {
         if (!mailEnabled) return;
         try {
@@ -186,7 +179,6 @@ public class EmailService {
         }
     }
     @SuppressWarnings("null")
-    @Async
     @Async
     public void sendHostApprovedEmail(String to, String hoTen) {
         if (!mailEnabled) return;
@@ -199,7 +191,6 @@ public class EmailService {
     }
     @SuppressWarnings("null")
     @Async
-    @Async
     public void sendHostRejectedEmail(String to, String hoTen) {
         if (!mailEnabled) return;
         try {
@@ -210,7 +201,6 @@ public class EmailService {
         }
     }
     @SuppressWarnings("null")
-    @Async
     @Async
     public void sendHostRevokedEmail(String to, String hoTen) {
         if (!mailEnabled) return;
@@ -445,7 +435,6 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
-    @Async
     @Async
     public void sendBookingPendingEmail(String to, String guestName, DatCho booking, boolean isWalletPayment,
             BigDecimal newBalance) {
