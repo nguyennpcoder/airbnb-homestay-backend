@@ -12,9 +12,9 @@ public interface NhomTienNghiRepository extends JpaRepository<NhomTienNghi, Long
     boolean existsByThuTuAndMaNhomTienNghiNot(Integer thuTu, Long maNhomTienNghi);
     boolean existsByThuTu(Integer thuTu);
 
-    @Query("SELECT n.tenNhom FROM NhomTienNghi n WHERE n.hoatDong = true")
+    @Query("SELECT n.tenNhom FROM NhomTienNghi n WHERE n.hoatDong = 1")
     List<String> findActiveGroupNames();
 
-    @Query("SELECT n.tenNhom FROM NhomTienNghi n WHERE n.hoatDong = true AND n.chuNha.maNguoiDung = :maChuNha")
+    @Query("SELECT n.tenNhom FROM NhomTienNghi n WHERE n.hoatDong = 1 AND n.chuNha.maNguoiDung = :maChuNha")
     List<String> findActiveGroupNamesByHost(Long maChuNha);
 }

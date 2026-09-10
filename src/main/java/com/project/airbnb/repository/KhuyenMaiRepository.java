@@ -14,7 +14,7 @@ public interface KhuyenMaiRepository extends JpaRepository<KhuyenMai, Long> {
 
     List<KhuyenMai> findByHoatDongTrueOrderByNgayTaoDesc();
 
-    @Query("SELECT k FROM KhuyenMai k WHERE k.hoatDong = true " +
+    @Query("SELECT k FROM KhuyenMai k WHERE k.hoatDong = 1 " +
            "AND (k.dieuKienNgayKetThuc IS NULL OR k.dieuKienNgayKetThuc >= :today) " +
            "AND (k.soLuongToiDa = 0 OR k.soLuongDaDung < k.soLuongToiDa) " +
            "ORDER BY k.ngayTao DESC")

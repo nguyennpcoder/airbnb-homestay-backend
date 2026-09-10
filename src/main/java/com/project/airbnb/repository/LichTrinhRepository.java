@@ -22,7 +22,7 @@ public interface LichTrinhRepository extends JpaRepository<LichTrinh, Long> {
 WHERE l.phong.maPhong IN :phongIds
               AND l.ngay >= :startDate
               AND l.ngay <= :endDate
-              AND (l.conKhaDung IS NULL OR l.conKhaDung = false)
+              AND (l.conKhaDung IS NULL OR l.conKhaDung = 0)
             """)
     List<Long> findUnavailablePhongIds(
             @Param("phongIds") List<Long> phongIds,

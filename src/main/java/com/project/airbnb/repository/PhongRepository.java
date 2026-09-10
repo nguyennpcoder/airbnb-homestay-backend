@@ -16,7 +16,7 @@ import java.util.Optional;
 public interface PhongRepository extends JpaRepository<Phong, Long>, JpaSpecificationExecutor<Phong> {
         List<Phong> findByLoaiPhong(Phong.LoaiPhong loaiPhong);
 
-        @Query("SELECT DISTINCT s FROM Phong s JOIN FETCH s.chuNha LEFT JOIN FETCH s.hinhAnhs WHERE s.chuNha.maNguoiDung = :maChuNha AND s.trangThai = 'hoat_dong' AND (s.biKhoa IS NULL OR s.biKhoa = false)")
+        @Query("SELECT DISTINCT s FROM Phong s JOIN FETCH s.chuNha LEFT JOIN FETCH s.hinhAnhs WHERE s.chuNha.maNguoiDung = :maChuNha AND s.trangThai = 'hoat_dong' AND (s.biKhoa IS NULL OR s.biKhoa = 0)")
         List<Phong> findByChuNha_MaNguoiDungAndNotLocked(@Param("maChuNha") Long maChuNha);
 
         @Query("SELECT s FROM Phong s JOIN FETCH s.chuNha WHERE s.chuNha.maNguoiDung = :maChuNha")
@@ -31,16 +31,16 @@ public interface PhongRepository extends JpaRepository<Phong, Long>, JpaSpecific
                         "(:maxPrice IS NULL OR s.giaMoiKhach <= :maxPrice) AND " +
                         "(:soPhongNgu IS NULL OR s.soPhongNgu >= :soPhongNgu) AND " +
                         "(:soPhongTam IS NULL OR s.soPhongTam >= :soPhongTam) AND " +
-                        "(s.biKhoa IS NULL OR s.biKhoa = false)")
+                        "(s.biKhoa IS NULL OR s.biKhoa = 0)")
         List<Phong> search(@Param("minPrice") BigDecimal minPrice,
                         @Param("maxPrice") BigDecimal maxPrice,
                         @Param("soPhongNgu") Integer soPhongNgu,
                         @Param("soPhongTam") Integer soPhongTam);
 
-        @Query("SELECT s FROM Phong s WHERE s.trangThai = com.project.airbnb.entity.Phong$TrangThaiPhong.hoat_dong AND s.loaiPhong = :loai AND (s.biKhoa IS NULL OR s.biKhoa = false) ORDER BY s.diemTrungBinh DESC")
+        @Query("SELECT s FROM Phong s WHERE s.trangThai = com.project.airbnb.entity.Phong$TrangThaiPhong.hoat_dong AND s.loaiPhong = :loai AND (s.biKhoa IS NULL OR s.biKhoa = 0) ORDER BY s.diemTrungBinh DESC")
         List<Phong> findTopRatedByLoai(@Param("loai") Phong.LoaiPhong loai);
 
-        @Query("SELECT s FROM Phong s WHERE s.trangThai = com.project.airbnb.entity.Phong$TrangThaiPhong.hoat_dong AND s.duocKhachYeuThich = true AND (s.biKhoa IS NULL OR s.biKhoa = false) ORDER BY s.diemTrungBinh DESC")
+        @Query("SELECT s FROM Phong s WHERE s.trangThai = com.project.airbnb.entity.Phong$TrangThaiPhong.hoat_dong AND s.duocKhachYeuThich = 1 AND (s.biKhoa IS NULL OR s.biKhoa = 0) ORDER BY s.diemTrungBinh DESC")
         List<Phong> findLovedByGuests();
 
         @org.springframework.data.jpa.repository.Modifying
@@ -66,6 +66,6 @@ public interface PhongRepository extends JpaRepository<Phong, Long>, JpaSpecific
     @Query("SELECT p FROM Phong p JOIN FETCH p.chuNha WHERE p.maPhong = :maPhong")
     Optional<Phong> findByIdWithChuNha(@Param("maPhong") Long maPhong);
 
-    @Query("SELECT p FROM Phong p WHERE p.trangThai = com.project.airbnb.entity.Phong$TrangThaiPhong.cho_duyet AND (p.biKhoa IS NULL OR p.biKhoa = false) AND p.ngayCapNhat < :threshold")
+    @Query("SELECT p FROM Phong p WHERE p.trangThai = com.project.airbnb.entity.Phong$TrangThaiPhong.cho_duyet AND (p.biKhoa IS NULL OR p.biKhoa = 0) AND p.ngayCapNhat < :threshold")
     List<Phong> findPendingOlderThan(@Param("threshold") LocalDateTime threshold);
 }

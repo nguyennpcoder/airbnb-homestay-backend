@@ -24,7 +24,7 @@ public interface OtpVerificationRepository extends JpaRepository<OtpVerification
     List<OtpVerification> findByEmailAndLoaiOrderByThoiGianTaoDesc(
             String email, OtpVerification.Loai loai);
 
-    @Query("SELECT o FROM OtpVerification o WHERE o.thoiGianHetHan < :now AND o.hetHan = false")
+    @Query("SELECT o FROM OtpVerification o WHERE o.thoiGianHetHan < :now AND o.hetHan = 0")
     List<OtpVerification> findExpiredOtps(@Param("now") LocalDateTime now);
 }
 

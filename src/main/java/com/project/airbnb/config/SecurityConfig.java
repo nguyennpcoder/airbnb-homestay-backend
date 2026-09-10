@@ -54,6 +54,11 @@ public class SecurityConfig {
                         // WebSocket endpoint
                         .requestMatchers("/ws/**").permitAll()
 
+                        // Public room/listing endpoints — guest browsing without login
+                        .requestMatchers(HttpMethod.GET, "/api/phong", "/api/phong/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/public/phong", "/api/public/phong/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/public/search", "/api/public/search/**").permitAll()
+
                         // User profile — GET for public viewing, mutating methods require auth
 //                        .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
 
@@ -94,7 +99,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource(
             @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:}") String allowedOriginsCsv) {
         CorsConfiguration configuration = new CorsConfiguration();
-        java.util.List<String> origins = new java.util.ArrayList<>(Arrays.asList(
+        java.util.List<String> explicitOrigins = new java.util.ArrayList<>(Arrays.asList(
                 "http://localhost:4301", "http://localhost:3000", "http://localhost:3001",
                 "http://127.0.0.1:3000", "http://127.0.0.1:4301",
                 "https://airbnb-homestay.onrender.com",
@@ -102,16 +107,18 @@ public class SecurityConfig {
         if (allowedOriginsCsv != null && !allowedOriginsCsv.isBlank()) {
             for (String o : allowedOriginsCsv.split(",")) {
                 String trimmed = o.trim();
-                if (!trimmed.isEmpty()) origins.add(trimmed);
+                if (!trimmed.isEmpty()) explicitOrigins.add(trimmed);
             }
         }
-        // If origin is not in the explicit list (e.g. a Vercel preview URL),
-        // echo the request Origin back so credentials still work.
-        configuration.setAllowedOriginPatterns(origins);
+        // Explicit origins (no wildcards) — required when setAllowCredentials=true.
+        configuration.setAllowedOrigins(explicitOrigins);
+        // Patterns for any wildcard origins (e.g. Vercel preview deploys).
+        configuration.setAllowedOriginPatterns(java.util.Collections.singletonList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

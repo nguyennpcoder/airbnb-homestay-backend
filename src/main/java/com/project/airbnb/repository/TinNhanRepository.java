@@ -17,18 +17,18 @@ public interface TinNhanRepository extends JpaRepository<TinNhan, Long> {
 
     @Modifying
     @Transactional
-    @Query("UPDATE TinNhan t SET t.daDoc = true WHERE t.datCho.maDatCho = :maDatCho AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false")
+    @Query("UPDATE TinNhan t SET t.daDoc = 1 WHERE t.datCho.maDatCho = :maDatCho AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0")
     void markAllAsRead(@Param("maDatCho") Long maDatCho, @Param("userId") Long userId);
 
     @Modifying
     @Transactional
-    @Query("UPDATE TinNhan t SET t.daDoc = true WHERE t.maTinNhan = :maTinNhan")
+    @Query("UPDATE TinNhan t SET t.daDoc = 1 WHERE t.maTinNhan = :maTinNhan")
     void markAsRead(@Param("maTinNhan") Long maTinNhan);
 
-    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.datCho.maDatCho = :maDatCho AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false")
+    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.datCho.maDatCho = :maDatCho AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0")
     Long countUnread(@Param("maDatCho") Long maDatCho, @Param("userId") Long userId);
 
-    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false")
+    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0")
     Long countAllUnreadByUser(@Param("userId") Long userId);
 
     /** Tin chưa đọc phía khách: đặt chỗ của khách hoặc hội thoại liên hệ phòng KHÔNG thuộc quyền sở hữu của user. */
@@ -38,7 +38,7 @@ public interface TinNhanRepository extends JpaRepository<TinNhan, Long> {
             LEFT JOIN d.khach k
             LEFT JOIN t.phong p
             LEFT JOIN p.chuNha c
-            WHERE t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false
+            WHERE t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0
               AND ((d IS NOT NULL AND k.maNguoiDung = :userId)
                 OR (d IS NULL AND p IS NOT NULL AND c.maNguoiDung <> :userId))
             """)
@@ -52,7 +52,7 @@ public interface TinNhanRepository extends JpaRepository<TinNhan, Long> {
             LEFT JOIN dp.chuNha dc
             LEFT JOIN t.phong p
             LEFT JOIN p.chuNha c
-            WHERE t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false
+            WHERE t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0
               AND ((d IS NOT NULL AND dc.maNguoiDung = :userId)
                 OR (d IS NULL AND p IS NOT NULL AND c.maNguoiDung = :userId)
                 OR (d IS NULL AND p IS NULL))
@@ -62,10 +62,10 @@ public interface TinNhanRepository extends JpaRepository<TinNhan, Long> {
     @Query("SELECT t FROM TinNhan t WHERE t.datCho.maDatCho = :maDatCho ORDER BY t.ngayTao DESC")
     List<TinNhan> findLastMessageByBooking(@Param("maDatCho") Long maDatCho, org.springframework.data.domain.Pageable pageable);
 
-    @Query("SELECT t.datCho.maDatCho, COUNT(t) FROM TinNhan t WHERE t.datCho.maDatCho IN :bookingIds AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false GROUP BY t.datCho.maDatCho")
+    @Query("SELECT t.datCho.maDatCho, COUNT(t) FROM TinNhan t WHERE t.datCho.maDatCho IN :bookingIds AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0 GROUP BY t.datCho.maDatCho")
     List<Object[]> countUnreadByBookingIds(@Param("bookingIds") List<Long> bookingIds, @Param("userId") Long userId);
 
-    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.nguoiGui.maNguoiDung = :hostId AND t.nguoiNhan.maNguoiDung = :guestId AND t.datCho.maDatCho = :maDatCho AND (t.autoReply IS NULL OR t.autoReply = false)")
+    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.nguoiGui.maNguoiDung = :hostId AND t.nguoiNhan.maNguoiDung = :guestId AND t.datCho.maDatCho = :maDatCho AND (t.autoReply IS NULL OR t.autoReply = 0)")
     long countHostManualReplies(@Param("hostId") Long hostId, @Param("guestId") Long guestId, @Param("maDatCho") Long maDatCho);
 
     // ==================== Hội thoại liên hệ trước đặt chỗ (tin_nhan.ma_phong, không tạo dat_cho) ====================
@@ -101,13 +101,13 @@ public interface TinNhanRepository extends JpaRepository<TinNhan, Long> {
 
     @Modifying
     @Transactional
-    @Query("UPDATE TinNhan t SET t.daDoc = true WHERE t.datCho IS NULL AND t.phong.maPhong = :maPhong AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false")
+    @Query("UPDATE TinNhan t SET t.daDoc = 1 WHERE t.datCho IS NULL AND t.phong.maPhong = :maPhong AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0")
     void markAllAsReadByPhong(@Param("maPhong") Long maPhong, @Param("userId") Long userId);
 
-    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.datCho IS NULL AND t.phong.maPhong = :maPhong AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false")
+    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.datCho IS NULL AND t.phong.maPhong = :maPhong AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0")
     Long countUnreadByPhong(@Param("maPhong") Long maPhong, @Param("userId") Long userId);
 
-    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.nguoiGui.maNguoiDung = :hostId AND t.nguoiNhan.maNguoiDung = :guestId AND t.datCho IS NULL AND t.phong.maPhong = :maPhong AND (t.autoReply IS NULL OR t.autoReply = false)")
+    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.nguoiGui.maNguoiDung = :hostId AND t.nguoiNhan.maNguoiDung = :guestId AND t.datCho IS NULL AND t.phong.maPhong = :maPhong AND (t.autoReply IS NULL OR t.autoReply = 0)")
     long countHostManualRepliesByPhong(@Param("hostId") Long hostId, @Param("guestId") Long guestId, @Param("maPhong") Long maPhong);
 
     // ==================== Hội thoại chủ nhà ↔ admin (tin_nhan không gắn phòng/đặt chỗ) ====================
@@ -139,27 +139,27 @@ public interface TinNhanRepository extends JpaRepository<TinNhan, Long> {
 
     @Modifying
     @Transactional
-    @Query("UPDATE TinNhan t SET t.daDoc = true WHERE t.datCho IS NULL AND t.phong IS NULL AND t.nguoiNhan.maNguoiDung = :userId AND t.nguoiGui.maNguoiDung = :partnerId AND t.daDoc = false")
+    @Query("UPDATE TinNhan t SET t.daDoc = 1 WHERE t.datCho IS NULL AND t.phong IS NULL AND t.nguoiNhan.maNguoiDung = :userId AND t.nguoiGui.maNguoiDung = :partnerId AND t.daDoc = 0")
     void markAllAsReadAdminThread(@Param("userId") Long userId, @Param("partnerId") Long partnerId);
 
-    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.datCho IS NULL AND t.phong IS NULL AND t.nguoiNhan.maNguoiDung = :userId AND t.nguoiGui.maNguoiDung = :partnerId AND t.daDoc = false")
+    @Query("SELECT COUNT(t) FROM TinNhan t WHERE t.datCho IS NULL AND t.phong IS NULL AND t.nguoiNhan.maNguoiDung = :userId AND t.nguoiGui.maNguoiDung = :partnerId AND t.daDoc = 0")
     Long countUnreadAdminThread(@Param("userId") Long userId, @Param("partnerId") Long partnerId);
 
     // ==================== Read receipt realtime (người nhận đọc → push WS cho người gửi) ====================
 
-    @Query("SELECT t.maTinNhan FROM TinNhan t WHERE t.datCho.maDatCho = :maDatCho AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false")
+    @Query("SELECT t.maTinNhan FROM TinNhan t WHERE t.datCho.maDatCho = :maDatCho AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0")
     List<Long> findUnreadIdsByDatCho(@Param("maDatCho") Long maDatCho, @Param("userId") Long userId);
 
-    @Query("SELECT DISTINCT t.nguoiGui.maNguoiDung FROM TinNhan t WHERE t.datCho.maDatCho = :maDatCho AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false")
+    @Query("SELECT DISTINCT t.nguoiGui.maNguoiDung FROM TinNhan t WHERE t.datCho.maDatCho = :maDatCho AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0")
     List<Long> findUnreadSendersByDatCho(@Param("maDatCho") Long maDatCho, @Param("userId") Long userId);
 
-    @Query("SELECT t.maTinNhan FROM TinNhan t WHERE t.datCho IS NULL AND t.phong.maPhong = :maPhong AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false")
+    @Query("SELECT t.maTinNhan FROM TinNhan t WHERE t.datCho IS NULL AND t.phong.maPhong = :maPhong AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0")
     List<Long> findUnreadIdsByPhong(@Param("maPhong") Long maPhong, @Param("userId") Long userId);
 
-    @Query("SELECT DISTINCT t.nguoiGui.maNguoiDung FROM TinNhan t WHERE t.datCho IS NULL AND t.phong.maPhong = :maPhong AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = false")
+    @Query("SELECT DISTINCT t.nguoiGui.maNguoiDung FROM TinNhan t WHERE t.datCho IS NULL AND t.phong.maPhong = :maPhong AND t.nguoiNhan.maNguoiDung = :userId AND t.daDoc = 0")
     List<Long> findUnreadSendersByPhong(@Param("maPhong") Long maPhong, @Param("userId") Long userId);
 
-    @Query("SELECT t.maTinNhan FROM TinNhan t WHERE t.datCho IS NULL AND t.phong IS NULL AND t.nguoiNhan.maNguoiDung = :userId AND t.nguoiGui.maNguoiDung = :partnerId AND t.daDoc = false")
+    @Query("SELECT t.maTinNhan FROM TinNhan t WHERE t.datCho IS NULL AND t.phong IS NULL AND t.nguoiNhan.maNguoiDung = :userId AND t.nguoiGui.maNguoiDung = :partnerId AND t.daDoc = 0")
     List<Long> findUnreadIdsAdminThread(@Param("userId") Long userId, @Param("partnerId") Long partnerId);
 
     @Query("SELECT t.nguoiGui.maNguoiDung FROM TinNhan t WHERE t.maTinNhan = :maTinNhan")
