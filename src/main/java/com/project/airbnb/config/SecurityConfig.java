@@ -91,16 +91,27 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:}") String allowedOriginsCsv) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(
-                Arrays.asList("http://localhost:4301", "http://localhost:3000", "http://localhost:3001",
-                        "http://127.0.0.1:3000", "http://127.0.0.1:4301",
-                        "https://airbnb-homestay.onrender.com",
-                        "https://airbnb-homestay-frontend.onrender.com"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        java.util.List<String> origins = new java.util.ArrayList<>(Arrays.asList(
+                "http://localhost:4301", "http://localhost:3000", "http://localhost:3001",
+                "http://127.0.0.1:3000", "http://127.0.0.1:4301",
+                "https://airbnb-homestay.onrender.com",
+                "https://airbnb-homestay-frontend.onrender.com"));
+        if (allowedOriginsCsv != null && !allowedOriginsCsv.isBlank()) {
+            for (String o : allowedOriginsCsv.split(",")) {
+                String trimmed = o.trim();
+                if (!trimmed.isEmpty()) origins.add(trimmed);
+            }
+        }
+        // If origin is not in the explicit list (e.g. a Vercel preview URL),
+        // echo the request Origin back so credentials still work.
+        configuration.setAllowedOriginPatterns(origins);
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
