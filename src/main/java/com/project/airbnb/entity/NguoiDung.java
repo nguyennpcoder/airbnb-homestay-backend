@@ -1,16 +1,13 @@
 package com.project.airbnb.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "nguoi_dung")
-@Data
-
-@NoArgsConstructor
-@AllArgsConstructor
 public class NguoiDung {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,7 +27,7 @@ public class NguoiDung {
     private String ten;
 
     @Column(name = "ngay_sinh")
-    private java.time.LocalDate ngaySinh;
+    private LocalDate ngaySinh;
 
     @Column(name = "ho_ten")
     private String hoTen;
@@ -81,16 +78,18 @@ public class NguoiDung {
     private Integer soLuongDanhGiaHost = 0;
 
     @Column(name = "diem_danh_gia_host", precision = 3, scale = 2)
-    private java.math.BigDecimal diemDanhGiaHost;
+    private BigDecimal diemDanhGiaHost;
 
     @Column(name = "so_du", precision = 15, scale = 2)
-    private java.math.BigDecimal soDu = java.math.BigDecimal.ZERO;
+    private BigDecimal soDu = BigDecimal.ZERO;
 
     @Column(name = "ngay_tao", updatable = false)
     private LocalDateTime ngayTao;
 
     @Column(name = "ngay_cap_nhat")
     private LocalDateTime ngayCapNhat;
+
+    public NguoiDung() {}
 
     @PrePersist
     protected void onCreate() {
@@ -102,4 +101,60 @@ public class NguoiDung {
     protected void onUpdate() {
         ngayCapNhat = LocalDateTime.now();
     }
+
+    // --- Getters ---
+    public Long getMaNguoiDung() { return maNguoiDung; }
+    public String getEmail() { return email; }
+    public String getMatKhauBam() { return matKhauBam; }
+    public String getHo() { return ho; }
+    public String getTen() { return ten; }
+    public LocalDate getNgaySinh() { return ngaySinh; }
+    public String getHoTen() { return hoTen; }
+    public String getSoDienThoai() { return soDienThoai; }
+    public Boolean getEmailDaXacNhan() { return emailDaXacNhan; }
+    public Boolean getDaChapNhanCamKetCongDong() { return daChapNhanCamKetCongDong; }
+    public Boolean getNhanTinNhanTiepThi() { return nhanTinNhanTiepThi; }
+    public Boolean getLaChuNha() { return laChuNha; }
+    public Boolean getLaAdmin() { return laAdmin; }
+    public Boolean getBiKhoa() { return biKhoa; }
+    public String getUrlAnhDaiDien() { return urlAnhDaiDien; }
+    public Boolean getXacMinhDanhTinh() { return xacMinhDanhTinh; }
+    public String getUrlBangChungDanhTinh() { return urlBangChungDanhTinh; }
+    public LocalDateTime getNgayXacMinh() { return ngayXacMinh; }
+    public String getLyDoKhoa() { return lyDoKhoa; }
+    public String getCongViec() { return congViec; }
+    public String getThanhPhoSong() { return thanhPhoSong; }
+    public Integer getSoLuongDanhGiaHost() { return soLuongDanhGiaHost; }
+    public BigDecimal getDiemDanhGiaHost() { return diemDanhGiaHost; }
+    public BigDecimal getSoDu() { return soDu; }
+    public LocalDateTime getNgayTao() { return ngayTao; }
+    public LocalDateTime getNgayCapNhat() { return ngayCapNhat; }
+
+    // --- Setters ---
+    public void setMaNguoiDung(Long maNguoiDung) { this.maNguoiDung = maNguoiDung; }
+    public void setEmail(String email) { this.email = email; }
+    public void setMatKhauBam(String matKhauBam) { this.matKhauBam = matKhauBam; }
+    public void setHo(String ho) { this.ho = ho; }
+    public void setTen(String ten) { this.ten = ten; }
+    public void setNgaySinh(LocalDate ngaySinh) { this.ngaySinh = ngaySinh; }
+    public void setHoTen(String hoTen) { this.hoTen = hoTen; }
+    public void setSoDienThoai(String soDienThoai) { this.soDienThoai = soDienThoai; }
+    public void setEmailDaXacNhan(Boolean emailDaXacNhan) { this.emailDaXacNhan = emailDaXacNhan; }
+    public void setDaChapNhanCamKetCongDong(Boolean daChapNhanCamKetCongDong) { this.daChapNhanCamKetCongDong = daChapNhanCamKetCongDong; }
+    public void setNhanTinNhanTiepThi(Boolean nhanTinNhanTiepThi) { this.nhanTinNhanTiepThi = nhanTinNhanTiepThi; }
+    public void setLaChuNha(Boolean laChuNha) { this.laChuNha = laChuNha; }
+    public void setLaAdmin(Boolean laAdmin) { this.laAdmin = laAdmin; }
+    public void setBiKhoa(Boolean biKhoa) { this.biKhoa = biKhoa; }
+    public void setUrlAnhDaiDien(String urlAnhDaiDien) { this.urlAnhDaiDien = urlAnhDaiDien; }
+    public void setXacMinhDanhTinh(Boolean xacMinhDanhTinh) { this.xacMinhDanhTinh = xacMinhDanhTinh; }
+    public void setUrlBangChungDanhTinh(String urlBangChungDanhTinh) { this.urlBangChungDanhTinh = urlBangChungDanhTinh; }
+    public void setNgayXacMinh(LocalDateTime ngayXacMinh) { this.ngayXacMinh = ngayXacMinh; }
+    public void setLyDoKhoa(String lyDoKhoa) { this.lyDoKhoa = lyDoKhoa; }
+    public void setCongViec(String congViec) { this.congViec = congViec; }
+    public void setThanhPhoSong(String thanhPhoSong) { this.thanhPhoSong = thanhPhoSong; }
+    public void setSoLuongDanhGiaHost(Integer soLuongDanhGiaHost) { this.soLuongDanhGiaHost = soLuongDanhGiaHost; }
+    public void setDiemDanhGiaHost(BigDecimal diemDanhGiaHost) { this.diemDanhGiaHost = diemDanhGiaHost; }
+    public void setSoDu(BigDecimal soDu) { this.soDu = soDu; }
+    public void setNgayTao(LocalDateTime ngayTao) { this.ngayTao = ngayTao; }
+    public void setNgayCapNhat(LocalDateTime ngayCapNhat) { this.ngayCapNhat = ngayCapNhat; }
 }
