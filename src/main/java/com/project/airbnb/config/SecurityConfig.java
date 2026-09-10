@@ -2,6 +2,7 @@ package com.project.airbnb.config;
 
 import com.project.airbnb.security.JwtAuthenticationFilter;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,15 +20,20 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Value("${app.cors.allowed-origins:}")
+    private String allowedOriginsCsv;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
@@ -58,9 +64,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/phong", "/api/phong/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/phong", "/api/public/phong/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/search", "/api/public/search/**").permitAll()
-
-                        // User profile — GET for public viewing, mutating methods require auth
-//                        .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
 
                         // Read-only data that should be visible to all guests
                         .requestMatchers("/api/host/**").permitAll()
@@ -95,11 +98,15 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
+    /**
+     * CORS configuration source. Parameterless so it can be invoked as
+     * {@code corsConfigurationSource()} from the SecurityFilterChain lambda.
+     * Env-driven origins via {@code app.cors.allowed-origins} (Render env var
+     * {@code CORS_ALLOWED_ORIGINS}, comma-separated).
+     */
     @Bean
-    public CorsConfigurationSource corsConfigurationSource(
-            @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:}") String allowedOriginsCsv) {
-        CorsConfiguration configuration = new CorsConfiguration();
-        java.util.List<String> explicitOrigins = new java.util.ArrayList<>(Arrays.asList(
+    public CorsConfigurationSource corsConfigurationSource() {
+        List<String> explicitOrigins = new ArrayList<>(Arrays.asList(
                 "http://localhost:4301", "http://localhost:3000", "http://localhost:3001",
                 "http://127.0.0.1:3000", "http://127.0.0.1:4301",
                 "https://airbnb-homestay.onrender.com",
@@ -110,10 +117,12 @@ public class SecurityConfig {
                 if (!trimmed.isEmpty()) explicitOrigins.add(trimmed);
             }
         }
+
+        CorsConfiguration configuration = new CorsConfiguration();
         // Explicit origins (no wildcards) — required when setAllowCredentials=true.
         configuration.setAllowedOrigins(explicitOrigins);
         // Patterns for any wildcard origins (e.g. Vercel preview deploys).
-        configuration.setAllowedOriginPatterns(java.util.Collections.singletonList("*"));
+        configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
