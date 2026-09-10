@@ -122,7 +122,8 @@ public class SecurityConfig {
         // Explicit origins (no wildcards) — required when setAllowCredentials=true.
         configuration.setAllowedOrigins(explicitOrigins);
         // Patterns for any wildcard origins (e.g. Vercel preview deploys).
-        configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
+        configuration.setAllo
+        wedOriginPatterns(Collections.singletonList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

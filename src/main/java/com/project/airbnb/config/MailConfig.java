@@ -8,11 +8,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.util.StringUtils;
 
 import java.util.Properties;
 
 @Configuration
+@EnableAsync
 public class MailConfig {
 
     private static final Logger log = LoggerFactory.getLogger(MailConfig.class);
@@ -57,12 +59,23 @@ public class MailConfig {
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
         props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.starttls.required", "true");
         props.put("mail.smtp.ssl.trust", host);
-        props.put("mail.smtp.connectiontimeout", "15000");
-        props.put("mail.smtp.timeout", "15000");
-        props.put("mail.smtp.writetimeout", "15000");
+
+        if (port == 465) {
+            // Port 465 uses SSL from the start
+            props.put("mail.smtp.ssl.enable", "true");
+            props.put("mail.smtp.starttls.enable", "false");
+            props.put("mail.smtp.starttls.required", "false");
+        } else {
+            // Port 587 uses STARTTLS upgrade
+            props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.starttls.required", "true");
+        }
+
+        // Generous timeouts — Render free tier cold-starts can be slow
+        props.put("mail.smtp.connectiontimeout", "30000");
+        props.put("mail.smtp.timeout", "30000");
+        props.put("mail.smtp.writetimeout", "30000");
 
         return mailSender;
     }

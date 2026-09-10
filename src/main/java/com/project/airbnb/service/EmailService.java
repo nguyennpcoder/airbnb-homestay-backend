@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -65,6 +66,7 @@ public class EmailService {
 
             mailSender.send(message);
             log.info("OTP email sent to: {}", to);
+            return true;
         } catch (MessagingException e) {
             log.error("Error sending OTP email to {}: {}", to, e.getMessage());
             log.warn("Email sending failed, but continuing. OTP code: {}", otpCode);
@@ -73,6 +75,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendWelcomeEmail(String to, String hoTen) {
         try {
             if (mailSender == null) {
@@ -98,6 +101,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendVerificationEmail(String to, String verificationToken) {
         try {
             if (mailSender == null) {
@@ -125,6 +129,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendAccountLockedEmail(String to, String hoTen, String reason) {
         try {
             if (mailSender == null) return;
@@ -146,6 +151,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendAccountUnlockedEmail(String to, String hoTen) {
         try {
             if (mailSender == null) return;
@@ -167,6 +173,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendRoleChangedEmail(String to, String hoTen, boolean isHost) {
         try {
             if (mailSender == null) return;
@@ -188,6 +195,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendKycVerifiedEmail(String to, String hoTen) {
         try {
             if (mailSender == null) return;
@@ -209,6 +217,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendKycRevokedEmail(String to, String hoTen) {
         try {
             if (mailSender == null) return;
@@ -230,6 +239,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendHostApprovedEmail(String to, String hoTen) {
         try {
             if (mailSender == null) return;
@@ -251,6 +261,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendHostRejectedEmail(String to, String hoTen) {
         try {
             if (mailSender == null) return;
@@ -272,6 +283,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendHostRevokedEmail(String to, String hoTen) {
         try {
             if (mailSender == null) return;
@@ -516,6 +528,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendBookingPendingEmail(String to, String guestName, DatCho booking, boolean isWalletPayment,
             BigDecimal newBalance) {
         try {
@@ -539,6 +552,7 @@ public class EmailService {
     }
 
     @SuppressWarnings("null")
+    @Async
     public void sendBookingConfirmedEmail(String to, String guestName, DatCho booking) {
         try {
             if (mailSender == null)
