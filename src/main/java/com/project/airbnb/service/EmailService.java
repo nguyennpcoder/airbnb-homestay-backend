@@ -5,13 +5,12 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.project.airbnb.entity.DatCho;
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.project.airbnb.config.ResendEmailSender;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -28,9 +27,41 @@ public class EmailService {
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
     private final JavaMailSender mailSender;
+    private final ResendEmailSender resendSender;
 
-    public EmailService(JavaMailSender mailSender) {
+    public EmailService(JavaMailSender mailSender, ResendEmailSender resendSender) {
         this.mailSender = mailSender;
+        this.resendSender = resendSender;
+    }
+
+    /**
+     * Send HTML email — tries Resend API first (works on Render), falls back to SMTP.
+     */
+    private boolean sendHtmlEmail(String to, String subject, String htmlBody) {
+        // Try Resend first (HTTP API — not blocked by Render)
+        if (resendSender.isConfigured()) {
+            boolean sent = resendSender.send(to, subject, htmlBody);
+            if (sent) return true;
+            log.warn("Resend failed, falling back to SMTP for {}", to);
+        }
+        // Fallback to SMTP (works locally, blocked on Render)
+        if (mailSender == null) {
+            log.warn("No email transport available. Email to {} not sent.", to);
+            return false;
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
+            mailSender.send(message);
+            return true;
+        } catch (Exception e) {
+            log.error("SMTP failed for {}: {}", to, e.getMessage());
+            return false;
+        }
     }
 
     @Value("${spring.mail.username:}")
@@ -49,25 +80,20 @@ public class EmailService {
      */
     @SuppressWarnings("null")
     public boolean sendOtpEmail(String to, String otpCode) {
+        if (!mailEnabled) {
+            log.warn("Mail disabled. OTP for {}: {}", to, otpCode);
+            return false;
+        }
         try {
-            if (mailSender == null) {
-                log.warn("Mail sender not configured. OTP email for {} would be: {}", to, otpCode);
-                return false;
-            }
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Mã xác nhận email của bạn - Airbnb Homestay");
-
             String htmlContent = buildOtpEmailContent(otpCode);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
-            log.info("OTP email sent to: {}", to);
-            return true;
-        } catch (MessagingException e) {
+            boolean sent = sendHtmlEmail(to, "Mã xác nhận email của bạn - Airbnb Homestay", htmlContent);
+            if (sent) {
+                log.info("OTP email sent to: {}", to);
+            } else {
+                log.warn("OTP email failed, but continuing. OTP code: {}", otpCode);
+            }
+            return sent;
+        } catch (Exception e) {
             log.error("Error sending OTP email to {}: {}", to, e.getMessage());
             log.warn("Email sending failed, but continuing. OTP code: {}", otpCode);
         }
@@ -76,234 +102,125 @@ public class EmailService {
 
     @SuppressWarnings("null")
     @Async
+    @Async
     public void sendWelcomeEmail(String to, String hoTen) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null) {
-                log.warn("Mail sender not configured. Welcome email for {} would be sent.", to);
-                return;
-            }
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Chào mừng bạn đến với Airbnb Homestay!");
-
-            String htmlContent = buildWelcomeEmailContent(hoTen);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            sendHtmlEmail(to, "Chào mừng bạn đến với Airbnb Homestay!", buildWelcomeEmailContent(hoTen));
             log.info("Welcome email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending welcome email to {}: {}", to, e.getMessage());
-            log.warn("Email sending failed, but continuing.");
         }
     }
-
     @SuppressWarnings("null")
+    @Async
     @Async
     public void sendVerificationEmail(String to, String verificationToken) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null) {
-                log.warn("Mail sender not configured. Verification email for {} would be sent with token: {}", to,
-                        verificationToken);
-                return;
-            }
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Xác nhận email của bạn - Airbnb Homestay");
-
             String verificationUrl = frontendUrl + "/verify-email?token=" + verificationToken;
-            String htmlContent = buildVerificationEmailContent(verificationUrl);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            sendHtmlEmail(to, "Xác nhận email của bạn - Airbnb Homestay", buildVerificationEmailContent(verificationUrl));
             log.info("Verification email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending verification email to {}: {}", to, e.getMessage());
-            log.warn("Email sending failed, but continuing.");
         }
     }
-
     @SuppressWarnings("null")
     @Async
+    @Async
     public void sendAccountLockedEmail(String to, String hoTen, String reason) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null) return;
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Tài khoản của bạn đã bị khóa - Airbnb Homestay");
-
-            String htmlContent = buildAccountLockedEmailContent(hoTen, reason);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            sendHtmlEmail(to, "Tài khoản của bạn đã bị khóa - Airbnb Homestay", buildAccountLockedEmailContent(hoTen, reason));
             log.info("Account locked email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending account locked email to {}: {}", to, e.getMessage());
         }
     }
-
     @SuppressWarnings("null")
     @Async
+    @Async
     public void sendAccountUnlockedEmail(String to, String hoTen) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null) return;
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Tài khoản của bạn đã được mở khóa - Airbnb Homestay");
-
-            String htmlContent = buildAccountUnlockedEmailContent(hoTen);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            sendHtmlEmail(to, "Tài khoản của bạn đã được mở khóa - Airbnb Homestay", buildAccountUnlockedEmailContent(hoTen));
             log.info("Account unlocked email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending account unlocked email to {}: {}", to, e.getMessage());
         }
     }
-
     @SuppressWarnings("null")
     @Async
+    @Async
     public void sendRoleChangedEmail(String to, String hoTen, boolean isHost) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null) return;
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Vai trò của bạn đã được cập nhật - Airbnb Homestay");
-
-            String htmlContent = buildRoleChangedEmailContent(hoTen, isHost);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            sendHtmlEmail(to, "Vai trò của bạn đã được cập nhật - Airbnb Homestay", buildRoleChangedEmailContent(hoTen, isHost));
             log.info("Role changed email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending role changed email to {}: {}", to, e.getMessage());
         }
     }
-
     @SuppressWarnings("null")
     @Async
+    @Async
     public void sendKycVerifiedEmail(String to, String hoTen) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null) return;
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Xác minh danh tính thành công - Airbnb Homestay");
-
-            String htmlContent = buildKycVerifiedEmailContent(hoTen);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            sendHtmlEmail(to, "Xác minh danh tính thành công - Airbnb Homestay", buildKycVerifiedEmailContent(hoTen));
             log.info("KYC verified email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending KYC verified email to {}: {}", to, e.getMessage());
         }
     }
-
     @SuppressWarnings("null")
     @Async
+    @Async
     public void sendKycRevokedEmail(String to, String hoTen) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null) return;
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Cập nhật xác minh danh tính - Airbnb Homestay");
-
-            String htmlContent = buildKycRevokedEmailContent(hoTen);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            sendHtmlEmail(to, "Cập nhật xác minh danh tính - Airbnb Homestay", buildKycRevokedEmailContent(hoTen));
             log.info("KYC revoked email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending KYC revoked email to {}: {}", to, e.getMessage());
         }
     }
-
     @SuppressWarnings("null")
     @Async
+    @Async
     public void sendHostApprovedEmail(String to, String hoTen) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null) return;
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Chúc mừng bạn đã trở thành Chủ nhà - Airbnb Homestay");
-
-            String htmlContent = buildHostApprovedEmailContent(hoTen);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            sendHtmlEmail(to, "Chúc mừng bạn đã trở thành Chủ nhà - Airbnb Homestay", buildHostApprovedEmailContent(hoTen));
             log.info("Host approved email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending host approved email to {}: {}", to, e.getMessage());
         }
     }
-
     @SuppressWarnings("null")
     @Async
+    @Async
     public void sendHostRejectedEmail(String to, String hoTen) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null) return;
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Yêu cầu trở thành Chủ nhà đã bị từ chối - Airbnb Homestay");
-
-            String htmlContent = buildHostRejectedEmailContent(hoTen);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            sendHtmlEmail(to, "Yêu cầu trở thành Chủ nhà đã bị từ chối - Airbnb Homestay", buildHostRejectedEmailContent(hoTen));
             log.info("Host rejected email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending host rejected email to {}: {}", to, e.getMessage());
         }
     }
-
     @SuppressWarnings("null")
     @Async
+    @Async
     public void sendHostRevokedEmail(String to, String hoTen) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null) return;
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Cập nhật vai trò tài khoản - Airbnb Homestay");
-
-            String htmlContent = buildHostRevokedEmailContent(hoTen);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            sendHtmlEmail(to, "Cập nhật vai trò tài khoản - Airbnb Homestay", buildHostRevokedEmailContent(hoTen));
             log.info("Host revoked email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending host revoked email to {}: {}", to, e.getMessage());
         }
     }
-
     private String buildOtpEmailContent(String otpCode) {
         return "<!DOCTYPE html>" +
                 "<html lang='vi'>" +
@@ -529,46 +446,24 @@ public class EmailService {
 
     @SuppressWarnings("null")
     @Async
+    @Async
     public void sendBookingPendingEmail(String to, String guestName, DatCho booking, boolean isWalletPayment,
             BigDecimal newBalance) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null)
-                return;
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Yêu cầu đặt phòng của bạn đã được gửi - Airbnb Homestay");
-
             String htmlContent = buildBookingPendingEmailContent(guestName, booking, isWalletPayment, newBalance);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            sendHtmlEmail(to, "Yêu cầu đặt phòng của bạn đã được gửi - Airbnb Homestay", htmlContent);
             log.info("Booking pending email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending booking pending email to {}: {}", to, e.getMessage());
         }
     }
-
     @SuppressWarnings("null")
     @Async
     public void sendBookingConfirmedEmail(String to, String guestName, DatCho booking) {
+        if (!mailEnabled) return;
         try {
-            if (mailSender == null)
-                return;
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("Đặt phòng đã được xác nhận! Mã check-in của bạn - Airbnb Homestay");
-
-            String htmlContent = buildBookingConfirmedEmailContent(guestName, booking);
-            helper.setText(htmlContent, true);
-
-            // Generate and attach QR Code
-            // QR Content: Detailed Text Note with room pass
+            // Generate QR code as base64 for embedding in HTML (works with both SMTP and Resend)
             String passPhong = booking.getPhong().getPassPhong() != null ? booking.getPhong().getPassPhong() : "";
             String qrContent = String.format(
                     "THÔNG TIN ĐẶT PHÒNG / BOOKING INFO\n" +
@@ -591,14 +486,21 @@ public class EmailService {
                     booking.getPhong().getThanhPho(),
                     passPhong);
 
+            String qrBase64 = "";
             byte[] qrImage = generateQRCodeImage(qrContent);
             if (qrImage != null) {
-                helper.addInline("qrCodeImage", new ByteArrayResource(qrImage), "image/png");
+                qrBase64 = "data:image/png;base64," + java.util.Base64.getEncoder().encodeToString(qrImage);
             }
 
-            mailSender.send(message);
+            String htmlContent = buildBookingConfirmedEmailContent(guestName, booking);
+            // Embed QR code as base64 data URI
+            if (!qrBase64.isEmpty()) {
+                htmlContent = htmlContent.replace("cid:qrCodeImage", qrBase64);
+            }
+
+            sendHtmlEmail(to, "Đặt phòng đã được xác nhận! Mã check-in của bạn - Airbnb Homestay", htmlContent);
             log.info("Booking confirmed email sent to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending booking confirmed email to {}: {}", to, e.getMessage());
         }
     }
