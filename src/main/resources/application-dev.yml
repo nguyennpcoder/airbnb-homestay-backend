@@ -1,0 +1,9 @@
+app:
+  debug-expose-otp: true
+  mail:
+    enabled: true
+
+logging:
+  level:
+    com.project.airbnb.service.EmailService: DEBUG
+    org.springframework.security: DEBUG

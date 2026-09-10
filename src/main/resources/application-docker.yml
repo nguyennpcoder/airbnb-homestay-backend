@@ -1,0 +1,3 @@
+spring:
+  datasource:
+    url: jdbc:mysql://mysql8-container:3306/airbnb_homestay?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false

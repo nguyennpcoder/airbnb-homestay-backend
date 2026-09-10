@@ -1,0 +1,104 @@
+package com.project.airbnb.config;
+
+import com.project.airbnb.security.JwtAuthenticationFilter;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+
+public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // Explicitly allow CORS preflight and multipart uploads
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Public/auth endpoints
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
+                        .requestMatchers("/api/payment/**").permitAll() // Allow payment callbacks
+
+                        // WebSocket endpoint
+                        .requestMatchers("/ws/**").permitAll()
+
+                        // User profile — GET for public viewing, mutating methods require auth
+//                        .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
+
+                        // Read-only data that should be visible to all guests
+                        .requestMatchers("/api/host/**").permitAll()
+                        .requestMatchers("/api/users/**").permitAll()
+                        .requestMatchers("/api/images/**").permitAll()
+                        .requestMatchers("/api/danh-gia/**").permitAll()
+                        .requestMatchers("/api/yeu-thich/**").permitAll()
+                        .requestMatchers("/api/thong-bao/**").permitAll()
+                        .requestMatchers("/api/tin-nhan/**").permitAll()
+                        .requestMatchers("/api/dat-cho/**").permitAll()
+                        .requestMatchers("/api/lich-trinh/**").permitAll()
+                        .requestMatchers("/api/quick-replies/**").permitAll() // Allow for testing
+                        .requestMatchers("/api/admin/**").permitAll() // Admin endpoints (protected by AdminGuard on frontend)
+                        .requestMatchers("/api/availability/**").permitAll()
+                        .requestMatchers("/api/chinh-sach-huy/**").permitAll()
+                        .requestMatchers("/api/quy-dinh/**").permitAll()
+
+                        // Everything else requires authentication
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(
+                Arrays.asList("http://localhost:4301", "http://localhost:3000", "http://localhost:3001",
+                        "http://127.0.0.1:3000", "http://127.0.0.1:4301"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}

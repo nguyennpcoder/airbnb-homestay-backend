@@ -1,0 +1,10 @@
+# Copy → application-local.yml (file này được gitignore qua import optional)
+spring:
+  mail:
+    username: your@gmail.com
+    password: your-gmail-app-password-16-chars
+
+app:
+  mail:
+    enabled: true
+  debug-expose-otp: false

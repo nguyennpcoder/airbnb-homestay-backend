@@ -1,0 +1,84 @@
+spring:
+  application:
+    name: airbnb-homestay
+
+  config:
+    import: optional:file:.env[.properties],optional:classpath:application-local.yml
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:aws-0-ap-southeast-1.pooler.supabase.com}:${DB_PORT:5432}/${DB_NAME:postgres}?sslmode=require
+    username: ${DB_USERNAME:postgres.ksjzpphvbpkayfmarpeb}
+    password: ${DB_PASSWORD:JkDELOvzRU6c89Hx}
+    driver-class-name: org.postgresql.Driver
+
+
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:nkockik@gmail.com}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+server:
+  port: ${SERVER_PORT:8089}
+
+jwt:
+  secret: ${JWT_SECRET:airbnbSecretKeyForJWTTokenGenerationAndValidation2024}
+  expiration: 86400000
+
+file:
+  upload-dir: ./uploads
+
+app:
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:3000}
+  backend:
+    url: ${BACKEND_URL:http://localhost:8089}
+  debug-expose-otp: ${DEBUG_EXPOSE_OTP:false}
+  mail:
+    enabled: ${MAIL_ENABLED:true}
+
+    debug-expose-otp: true
+
+vnpay:
+  tmnCode: 0J2K64AX
+  hashSecret: SGCGRRHLAUQBZTTNFBBZHJIJZQYATDSZ
+  payUrl: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+  returnUrl: ${VNPAY_RETURN_URL:http://localhost:3000/payment/vnpay/return}
+  apiUrl: https://sandbox.vnpayment.vn/merchant_webapi/api/transaction
+
+zalopay:
+  appId: 554
+  key1: 8NdU5pG5R2spGHGhyO99HN1OhD8IQJBn
+  key2: uUfsWgfLkRLzq6W2uNXTCxrfxs51auny
+  createUrl: https://sb-openapi.zalopay.vn/v2/create
+  returnUrl: ${ZALOPAY_RETURN_URL:http://localhost:3000/payment/zalopay/return}
+  refundUrl: https://sb-openapi.zalopay.vn/v2/refund
+
+momo:
+  partnerCode: MOMO
+  accessKey: F8BBA842ECF85
+  secretKey: K951B6PE1waDMi640xX08PD3vg6EkVlz
+  createUrl: https://test-payment.momo.vn/v2/gateway/api/create
+  returnUrl: ${MOMO_RETURN_URL:http://localhost:3000/payment/momo/return}

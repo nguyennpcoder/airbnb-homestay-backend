@@ -1,0 +1,13 @@
+spring:
+  profiles:
+    active: prod
+
+app:
+  debug-expose-otp: false
+
+server:
+  port: 8089
+
+logging:
+  level:
+    root: INFO
