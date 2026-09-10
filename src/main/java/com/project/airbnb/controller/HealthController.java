@@ -15,8 +15,23 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/health")
 public class HealthController {
+
+    @GetMapping("/")
+    public ResponseEntity<Map<String, Object>> root() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("app", "airbnb-homestay");
+        body.put("status", "UP");
+        body.put("docs", "/api/health/db, /api/health/mail");
+        return ResponseEntity.ok(body);
+    }
+
+    @GetMapping("/healthz")
+    public ResponseEntity<Map<String, Object>> healthz() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", "UP");
+        return ResponseEntity.ok(body);
+    }
 
     private final DataSource dataSource;
     private final EmailService emailService;

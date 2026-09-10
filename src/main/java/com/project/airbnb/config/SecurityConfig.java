@@ -42,6 +42,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Explicitly allow CORS preflight and multipart uploads
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Health check endpoints (for Render)
+                        .requestMatchers("/", "/healthz", "/actuator/**").permitAll()
+                        .requestMatchers("/api/health/**").permitAll()
                         // Public/auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
@@ -92,7 +95,9 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(
                 Arrays.asList("http://localhost:4301", "http://localhost:3000", "http://localhost:3001",
-                        "http://127.0.0.1:3000", "http://127.0.0.1:4301"));
+                        "http://127.0.0.1:3000", "http://127.0.0.1:4301",
+                        "https://airbnb-homestay.onrender.com",
+                        "https://airbnb-homestay-frontend.onrender.com"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
