@@ -26,8 +26,14 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/public/search")
 public class SearchController {
 
-    /** Short TTL: keeps the homepage hot without being stale after edits. */
+    /** Dated searches drive availability, so keep their cache very short. */
     private static final long SEARCH_TTL_MS = 45_000L;
+    /**
+     * Browse searches (homepage, city listings) change only when a host
+     * publishes/edits a room. Five minutes keeps those pages consistently
+     * fast without making edits invisible for long.
+     */
+    private static final long SEARCH_BROWSE_TTL_MS = 5 * 60_000L;
     private static final long LOCATIONS_TTL_MS = 10 * 60_000L;
     private static final String SEARCH_CACHE_CONTROL = "public, max-age=30, stale-while-revalidate=120";
     private static final String LOCATIONS_CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=600";
@@ -104,8 +110,11 @@ public class SearchController {
                 .build();
 
         String cacheKey = buildCacheKey(criteria, imageLimit);
+        long ttl = (criteria.getNgayNhan() != null || criteria.getNgayTra() != null)
+                ? SEARCH_TTL_MS
+                : SEARCH_BROWSE_TTL_MS;
 
-        List<PhongDTO> results = responseCache.getOrLoad(cacheKey, SEARCH_TTL_MS, () -> {
+        List<PhongDTO> results = responseCache.getOrLoad(cacheKey, ttl, () -> {
             List<PhongDTO> rooms = filterAmenities(searchService.search(criteria));
 
             // Homepage carousels only need the first few photos of each room.
