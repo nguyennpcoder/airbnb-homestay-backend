@@ -9,8 +9,10 @@ import com.project.airbnb.repository.PhongRepository;
 import com.project.airbnb.repository.TienNghiPhongRepository;
 import com.project.airbnb.repository.NhomTienNghiRepository;
 import com.project.airbnb.repository.DanhMucTienNghiRepository;
+import com.project.airbnb.service.ResponseCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,19 +35,25 @@ public class PhongController {
     private final NguoiDungRepository nguoiDungRepository;
     private final NhomTienNghiRepository nhomTienNghiRepository;
     private final DanhMucTienNghiRepository danhMucTienNghiRepository;
+    private final ResponseCache responseCache;
+
+    private static final long ROOM_TTL_MS = 60_000L;
+    private static final String ROOM_CACHE_CONTROL = "public, max-age=60, stale-while-revalidate=300";
 
     public PhongController(PhongRepository phongRepository,
             HinhAnhRepository hinhAnhRepository,
             TienNghiPhongRepository tienNghiPhongRepository,
             NguoiDungRepository nguoiDungRepository,
             NhomTienNghiRepository nhomTienNghiRepository,
-            DanhMucTienNghiRepository danhMucTienNghiRepository) {
+            DanhMucTienNghiRepository danhMucTienNghiRepository,
+            ResponseCache responseCache) {
         this.phongRepository = phongRepository;
         this.hinhAnhRepository = hinhAnhRepository;
         this.tienNghiPhongRepository = tienNghiPhongRepository;
         this.nguoiDungRepository = nguoiDungRepository;
         this.nhomTienNghiRepository = nhomTienNghiRepository;
         this.danhMucTienNghiRepository = danhMucTienNghiRepository;
+        this.responseCache = responseCache;
     }
 
     private Optional<Long> getCurrentUserId() {
@@ -66,15 +74,41 @@ public class PhongController {
     @GetMapping("/{id}")
     @Transactional
     public ResponseEntity<PhongDTO> getPhongById(@PathVariable Long id) {
+        Optional<Long> currentUserId = getCurrentUserId();
+
+        // A logged-in host may be previewing a room that is not public yet.
+        // Never share that response through the cache.
+        if (currentUserId.isPresent()) {
+            return loadRoom(id, currentUserId.get())
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        }
+
+        // The page waits for this call before it can render the hero image.
+        // It used to run 6 sequential queries on every visit (~2.4s); cache
+        // the assembled DTO briefly so the next visitors get it instantly.
+        Optional<PhongDTO> room = responseCache.getOrLoad(
+                "public-phong:v2:" + id,
+                ROOM_TTL_MS,
+                () -> loadRoom(id, null));
+
+        return room
+                .map(dto -> ResponseEntity.ok()
+                        .header(HttpHeaders.CACHE_CONTROL, ROOM_CACHE_CONTROL)
+                        .body(dto))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** Loads a room and builds its DTO. Must run inside a transaction. */
+    private Optional<PhongDTO> loadRoom(Long id, Long currentUserId) {
         phongRepository.incrementViews(id);
         return phongRepository.findById(id)
                 .map(phong -> {
                     if (Boolean.TRUE.equals(phong.getBiKhoa())) {
                         return null;
                     }
-                    boolean isHost = getCurrentUserId()
-                            .map(uid -> uid.equals(phong.getChuNha().getMaNguoiDung()))
-                            .orElse(false);
+                    boolean isHost = currentUserId != null
+                            && currentUserId.equals(phong.getChuNha().getMaNguoiDung());
                     if (!isHost && phong.getTrangThai() != Phong.TrangThaiPhong.hoat_dong) {
                         return null;
                     }
@@ -92,9 +126,7 @@ public class PhongController {
                     }
 
                     return dto;
-                })
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                });
     }
 
     @GetMapping("/yeu-thich")
