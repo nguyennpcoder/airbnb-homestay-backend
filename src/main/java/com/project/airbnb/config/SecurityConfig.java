@@ -110,7 +110,9 @@ public class SecurityConfig {
                 "http://localhost:4301", "http://localhost:3000", "http://localhost:3001",
                 "http://127.0.0.1:3000", "http://127.0.0.1:4301",
                 "https://airbnb-homestay.onrender.com",
-                "https://airbnb-homestay-frontend.onrender.com"));
+                "https://airbnb-homestay-frontend.onrender.com",
+                "https://airbnb-homestay-frontend.vercel.app",
+                "https://airbnb-homestay-frontend-ntuh85a03-nkockik-2539s-projects.vercel.app"));
         if (allowedOriginsCsv != null && !allowedOriginsCsv.isBlank()) {
             for (String o : allowedOriginsCsv.split(",")) {
                 String trimmed = o.trim();

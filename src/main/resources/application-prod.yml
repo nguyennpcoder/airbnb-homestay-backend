@@ -2,7 +2,8 @@ app:
   debug-expose-otp: false
 
 server:
-  port: 8089
+  # Render sets PORT (usually 10000). Fall back to SERVER_PORT/8089 for local runs.
+  port: ${PORT:${SERVER_PORT:8089}}
 
 logging:
   level:

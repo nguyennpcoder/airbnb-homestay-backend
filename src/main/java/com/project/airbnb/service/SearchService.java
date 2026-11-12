@@ -2,6 +2,7 @@ package com.project.airbnb.service;
 
 import com.project.airbnb.dto.PhongDTO;
 import com.project.airbnb.dto.SearchCriteria;
+import com.project.airbnb.entity.HinhAnh;
 import com.project.airbnb.entity.Phong;
 import com.project.airbnb.repository.DatChoRepository;
 import com.project.airbnb.repository.HinhAnhRepository;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -46,11 +48,21 @@ public class SearchService {
 
         List<Phong> availableRooms = filterAvailability(rooms, criteria);
 
+        if (availableRooms.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // One image query for all rooms instead of one query per room (N+1).
+        List<Long> roomIds = availableRooms.stream()
+                .map(Phong::getMaPhong)
+                .toList();
+        Map<Long, List<HinhAnh>> imagesByRoom = hinhAnhRepository.findByPhongIds(roomIds).stream()
+                .collect(Collectors.groupingBy(h -> h.getPhong().getMaPhong()));
+
         return availableRooms.stream()
-                .map(room -> {
-                    var hinhAnhs = hinhAnhRepository.findByPhong_MaPhongOrderByThuTuAsc(room.getMaPhong());
-                    return PhongDTO.fromEntity(room, hinhAnhs);
-                })
+                .map(room -> PhongDTO.fromEntity(
+                        room,
+                        imagesByRoom.getOrDefault(room.getMaPhong(), Collections.emptyList())))
                 .collect(Collectors.toList());
     }
 

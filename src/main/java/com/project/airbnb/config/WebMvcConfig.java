@@ -1,11 +1,13 @@
 package com.project.airbnb.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.TimeUnit;
 
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
@@ -15,9 +17,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // Serve static files from uploads directory
         Path uploadsPath = Paths.get("uploads");
         String uploadsAbsolutePath = uploadsPath.toFile().getAbsolutePath();
-        
+
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + uploadsAbsolutePath + "/");
+                .addResourceLocations("file:" + uploadsAbsolutePath + "/")
+                .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic().immutable());
     }
 }
 
