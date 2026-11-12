@@ -63,8 +63,20 @@ public interface PhongRepository extends JpaRepository<Phong, Long>, JpaSpecific
 
         long countByChuNha_MaNguoiDung(Long maChuNha);
 
-    @Query("SELECT p FROM Phong p JOIN FETCH p.chuNha WHERE p.maPhong = :maPhong")
-    Optional<Phong> findByIdWithChuNha(@Param("maPhong") Long maPhong);
+        @Query("SELECT p FROM Phong p JOIN FETCH p.chuNha WHERE p.maPhong = :maPhong")
+        Optional<Phong> findByIdWithChuNha(@Param("maPhong") Long maPhong);
+
+        /**
+         * City list for the search bar. Previously /public/search/locations
+         * loaded every room + image to collect a handful of city names.
+         */
+        @Query("SELECT DISTINCT p.thanhPho FROM Phong p " +
+                        "WHERE p.trangThai = com.project.airbnb.entity.Phong$TrangThaiPhong.hoat_dong " +
+                        "AND p.loaiPhong = :loai " +
+                        "AND p.thanhPho IS NOT NULL AND p.thanhPho <> '' " +
+                        "AND (p.biKhoa IS NULL OR p.biKhoa = false) " +
+                        "ORDER BY p.thanhPho")
+        List<String> findDistinctThanhPhoByLoaiPhong(@Param("loai") Phong.LoaiPhong loai);
 
     @Query("SELECT p FROM Phong p WHERE p.trangThai = com.project.airbnb.entity.Phong$TrangThaiPhong.cho_duyet AND (p.biKhoa IS NULL OR p.biKhoa = 0) AND p.ngayCapNhat < :threshold")
     List<Phong> findPendingOlderThan(@Param("threshold") LocalDateTime threshold);

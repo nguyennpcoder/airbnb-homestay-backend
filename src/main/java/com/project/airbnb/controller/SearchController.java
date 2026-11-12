@@ -3,10 +3,13 @@ package com.project.airbnb.controller;
 import com.project.airbnb.dto.PhongDTO;
 import com.project.airbnb.dto.SearchCriteria;
 import com.project.airbnb.entity.Phong;
-import com.project.airbnb.repository.NhomTienNghiRepository;
 import com.project.airbnb.repository.DanhMucTienNghiRepository;
+import com.project.airbnb.repository.NhomTienNghiRepository;
+import com.project.airbnb.repository.PhongRepository;
+import com.project.airbnb.service.ResponseCache;
 import com.project.airbnb.service.SearchService;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -23,30 +26,42 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/public/search")
 public class SearchController {
 
+    /** Short TTL: keeps the homepage hot without being stale after edits. */
+    private static final long SEARCH_TTL_MS = 45_000L;
+    private static final long LOCATIONS_TTL_MS = 10 * 60_000L;
+    private static final String SEARCH_CACHE_CONTROL = "public, max-age=30, stale-while-revalidate=120";
+    private static final String LOCATIONS_CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=600";
+
     private final SearchService searchService;
+    private final PhongRepository phongRepository;
     private final NhomTienNghiRepository nhomTienNghiRepository;
     private final DanhMucTienNghiRepository danhMucTienNghiRepository;
+    private final ResponseCache responseCache;
 
     public SearchController(SearchService searchService,
+            PhongRepository phongRepository,
             NhomTienNghiRepository nhomTienNghiRepository,
-            DanhMucTienNghiRepository danhMucTienNghiRepository) {
+            DanhMucTienNghiRepository danhMucTienNghiRepository,
+            ResponseCache responseCache) {
         this.searchService = searchService;
+        this.phongRepository = phongRepository;
         this.nhomTienNghiRepository = nhomTienNghiRepository;
         this.danhMucTienNghiRepository = danhMucTienNghiRepository;
+        this.responseCache = responseCache;
     }
 
     @GetMapping("/locations")
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<String>> getLocations() {
-        var criteria = SearchCriteria.builder().loaiPhong(Phong.LoaiPhong.noi_luu_tru).build();
-        List<PhongDTO> rooms = searchService.search(criteria);
-        List<String> locations = rooms.stream()
-                .map(PhongDTO::getThanhPho)
-                .filter(t -> t != null && !t.isBlank())
-                .distinct()
-                .sorted()
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(locations);
+        // Used to run a full room search just to collect city names (2.3s).
+        // A DISTINCT query returns the same list in a few milliseconds.
+        List<String> locations = responseCache.getOrLoad(
+                "search:locations:v1",
+                LOCATIONS_TTL_MS,
+                () -> phongRepository.findDistinctThanhPhoByLoaiPhong(Phong.LoaiPhong.noi_luu_tru));
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, LOCATIONS_CACHE_CONTROL)
+                .body(locations);
     }
 
     @GetMapping
@@ -88,37 +103,56 @@ public class SearchController {
                 .loaiHinh(normalizeList(loaiHinh))
                 .build();
 
-        List<PhongDTO> results = filterAmenities(searchService.search(criteria));
+        String cacheKey = buildCacheKey(criteria, imageLimit);
 
-        // Homepage carousels only need the first few photos of each room.
-        // Trimming here keeps the JSON small and skips serializing ~1000 image
-        // rows, which matters a lot on a 0.1 CPU Render instance.
-        if (imageLimit != null && imageLimit >= 0) {
-            results.forEach(dto -> {
-                var images = dto.getHinhAnhs();
-                if (images != null && images.size() > imageLimit) {
-                    dto.setHinhAnhs(new java.util.ArrayList<>(images.subList(0, imageLimit)));
-                }
-            });
-        }
+        List<PhongDTO> results = responseCache.getOrLoad(cacheKey, SEARCH_TTL_MS, () -> {
+            List<PhongDTO> rooms = filterAmenities(searchService.search(criteria));
 
-        return ResponseEntity.ok(results);
+            // Homepage carousels only need the first few photos of each room.
+            // Trim inside the loader so the cache stores the small payload.
+            if (imageLimit != null && imageLimit >= 0) {
+                rooms.forEach(dto -> {
+                    var images = dto.getHinhAnhs();
+                    if (images != null && images.size() > imageLimit) {
+                        dto.setHinhAnhs(new java.util.ArrayList<>(images.subList(0, imageLimit)));
+                    }
+                });
+            }
+            return rooms;
+        });
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, SEARCH_CACHE_CONTROL)
+                .body(results);
+    }
+
+    private String buildCacheKey(SearchCriteria c, Integer imageLimit) {
+        return "search:v2"
+                + "|lp=" + text(c.getLoaiPhong())
+                + "|tp=" + text(c.getThanhPho()).toLowerCase()
+                + "|sk=" + text(c.getSoKhach())
+                + "|nn=" + text(c.getNgayNhan())
+                + "|nt=" + text(c.getNgayTra())
+                + "|min=" + text(c.getMinPrice())
+                + "|max=" + text(c.getMaxPrice())
+                + "|tn=" + csv(c.getTienNghi())
+                + "|lat=" + text(c.getMinLat()) + ":" + text(c.getMaxLat())
+                + "|lng=" + text(c.getMinLng()) + ":" + text(c.getMaxLng())
+                + "|lh=" + csv(c.getLoaiHinh())
+                + "|img=" + text(imageLimit);
+    }
+
+    private String text(Object value) {
+        return value == null ? "" : value.toString();
+    }
+
+    private String csv(List<String> values) {
+        return values == null ? "" : values.stream().sorted().collect(Collectors.joining(","));
     }
 
     private List<PhongDTO> filterAmenities(List<PhongDTO> rooms) {
-        // Cache per host to avoid repeated queries
-        java.util.Map<Long, Set<String>> activeGroupsCache = new java.util.HashMap<>();
-        java.util.Map<Long, Set<String>> hiddenCatalogsCache = new java.util.HashMap<>();
-
-        rooms.forEach(dto -> {
-            // We need the host ID from the room, but PhongDTO doesn't store it directly
-            // The filtering will be done per-host using the cache
-            // For search results, we use the global fallback (all groups active)
-        });
-
-        // For search results, use global active groups as fallback
-        java.util.Set<String> globalActiveGroups = new HashSet<>(nhomTienNghiRepository.findActiveGroupNames());
-        java.util.Set<String> globalHiddenCatalogs = new HashSet<>(danhMucTienNghiRepository.findHiddenCatalogNames());
+        Set<String> globalActiveGroups = new HashSet<>(nhomTienNghiRepository.findActiveGroupNames());
+        Set<String> globalHiddenCatalogs = new HashSet<>(danhMucTienNghiRepository.findHiddenCatalogNames());
         rooms.forEach(dto -> dto.setTienNghi(PhongDTO.filterTienNghi(dto.getTienNghi(), globalActiveGroups, globalHiddenCatalogs)));
         return rooms;
     }
