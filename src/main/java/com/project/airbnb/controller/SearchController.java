@@ -64,7 +64,8 @@ public class SearchController {
             @RequestParam(required = false) BigDecimal maxLat,
             @RequestParam(required = false) BigDecimal minLng,
             @RequestParam(required = false) BigDecimal maxLng,
-            @RequestParam(required = false) List<String> loaiHinh) {
+            @RequestParam(required = false) List<String> loaiHinh,
+            @RequestParam(required = false) Integer imageLimit) {
         if (ngayNhan != null && ngayTra != null && !ngayNhan.isBefore(ngayTra)) {
             return ResponseEntity.badRequest().build();
         }
@@ -87,7 +88,21 @@ public class SearchController {
                 .loaiHinh(normalizeList(loaiHinh))
                 .build();
 
-        return ResponseEntity.ok(filterAmenities(searchService.search(criteria)));
+        List<PhongDTO> results = filterAmenities(searchService.search(criteria));
+
+        // Homepage carousels only need the first few photos of each room.
+        // Trimming here keeps the JSON small and skips serializing ~1000 image
+        // rows, which matters a lot on a 0.1 CPU Render instance.
+        if (imageLimit != null && imageLimit >= 0) {
+            results.forEach(dto -> {
+                var images = dto.getHinhAnhs();
+                if (images != null && images.size() > imageLimit) {
+                    dto.setHinhAnhs(new java.util.ArrayList<>(images.subList(0, imageLimit)));
+                }
+            });
+        }
+
+        return ResponseEntity.ok(results);
     }
 
     private List<PhongDTO> filterAmenities(List<PhongDTO> rooms) {
